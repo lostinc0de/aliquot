@@ -1,0 +1,11 @@
+[package]
+name = "aliquot"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Generating aliquot sequences"
+repository = "https://github.com/lostinc0de/aliquot"
+readme = "README.md"
+keywords = ["aliquot"]
+
+[dependencies]
