@@ -13,7 +13,7 @@ pub enum AliquotSeq<T: Number> {
     SociableNumber(Vec<T>),
     AspiringNumber(Vec<T>),
     IntoCycle(Vec<T>, Vec<T>),
-    Unknown(Vec<T>),
+    Unknown(Vec<T>, String),
 }
 
 impl<T: Number> AliquotSeq<T> {
@@ -28,7 +28,7 @@ impl<T: Number> AliquotSeq<T> {
             AliquotSeq::SociableNumber(v) => v[0],
             AliquotSeq::AspiringNumber(v) => v[0],
             AliquotSeq::IntoCycle(v, _) => v[0],
-            AliquotSeq::Unknown(v) => v[0],
+            AliquotSeq::Unknown(v, _) => v[0],
         }
     }
 
@@ -42,21 +42,21 @@ impl<T: Number> AliquotSeq<T> {
             AliquotSeq::SociableNumber(v) => v.len(),
             AliquotSeq::AspiringNumber(v) => v.len(),
             AliquotSeq::IntoCycle(v0, v1) => v0.len() + v1.len(),
-            AliquotSeq::Unknown(v) => v.len(),
+            AliquotSeq::Unknown(v, _) => v.len(),
         }
     }
 
     /// Returns the type of the aliquot sequence as a string.
-    pub fn type_str(&self) -> &str {
+    pub fn type_str(&self) -> String {
         match self {
-            AliquotSeq::PerfectNumber(_) => "Perfect number",
-            AliquotSeq::PrimeNumber(_) => "Prime number",
-            AliquotSeq::Convergent(_) => "Convergent sequence",
-            AliquotSeq::AmicableNumber(_) => "Amicable number",
-            AliquotSeq::SociableNumber(_) => "Sociable number",
-            AliquotSeq::AspiringNumber(_) => "Aspiring number",
-            AliquotSeq::IntoCycle(_, _) => "Convergent into cycle",
-            AliquotSeq::Unknown(_) => "Unknown sequence",
+            AliquotSeq::PerfectNumber(_) => "Perfect number".to_string(),
+            AliquotSeq::PrimeNumber(_) => "Prime number".to_string(),
+            AliquotSeq::Convergent(_) => "Convergent sequence".to_string(),
+            AliquotSeq::AmicableNumber(_) => "Amicable number".to_string(),
+            AliquotSeq::SociableNumber(_) => "Sociable number".to_string(),
+            AliquotSeq::AspiringNumber(_) => "Aspiring number".to_string(),
+            AliquotSeq::IntoCycle(_, _) => "Convergent into cycle".to_string(),
+            AliquotSeq::Unknown(_, reason) => format!("Unknown sequence (Reason: {reason})"),
         }
     }
 
@@ -74,7 +74,7 @@ impl<T: Number> AliquotSeq<T> {
                 ret.append(&mut v1.clone());
                 ret
             }
-            AliquotSeq::Unknown(v) => v.clone(),
+            AliquotSeq::Unknown(v, _) => v.clone(),
         }
     }
 
@@ -107,7 +107,7 @@ impl<T: Number> AliquotSeq<T> {
                 ret += &vec_to_string(v1);
                 ret
             }
-            AliquotSeq::Unknown(v) => vec_to_string(v),
+            AliquotSeq::Unknown(v, _) => vec_to_string(v),
         }
     }
 
@@ -177,7 +177,7 @@ impl<T: Number> Cache<T> {
                     AliquotSeq::IntoCycle(ref seq, _) => {
                         self.add_seq_lut(n, seq);
                     }
-                    AliquotSeq::Unknown(ref seq) => {
+                    AliquotSeq::Unknown(ref seq, _) => {
                         self.add_seq_lut(n, seq);
                     }
                     _ => {}
@@ -254,11 +254,11 @@ impl<T: Number> Cache<T> {
                         return Some(AliquotSeq::IntoCycle(seq_new, cycle.clone()));
                     }
                 }
-                Some(AliquotSeq::Unknown(seq)) => {
+                Some(AliquotSeq::Unknown(seq, reason)) => {
                     if let Some(pos) = find_pos_n(seq) {
                         if pos < (seq.len() - 1) {
                             let seq_new = seq[pos..].to_vec();
-                            return Some(AliquotSeq::Unknown(seq_new));
+                            return Some(AliquotSeq::Unknown(seq_new, reason.clone()));
                         }
                     }
                 }
@@ -369,7 +369,7 @@ where
         let mut seq = vec![n];
         // Aliquot sequence is undefined for 0
         if n == T::ZERO || n == T::ONE {
-            return AliquotSeq::Unknown(seq);
+            return AliquotSeq::Unknown(seq, "Undefined".to_string());
         }
         // Check if the aliquot sequence has been computed for this number already
         if let Some(aliquot_seq_cache) = self.cache.get(n) {
@@ -384,7 +384,8 @@ where
                     // Abort, if a number in the sequence exceeds the maximum value allowed
                     if next >= self.max_num {
                         self.print_debug(format!("Numbers in the sequence for {n} exceed maximum"));
-                        return self.cache.add_and_return(AliquotSeq::Unknown(seq));
+                        let reason = format!("Maximum value {} exceeded", self.max_num);
+                        return self.cache.add_and_return(AliquotSeq::Unknown(seq, reason));
                     }
                     // First check if the sum is stored in the cache, so we don't need
                     // to compute the rest of the sequence
@@ -431,10 +432,10 @@ where
                                     .cache
                                     .add_and_return(AliquotSeq::IntoCycle(seq, v1.clone()));
                             }
-                            AliquotSeq::Unknown(v) => {
+                            AliquotSeq::Unknown(v, reason) => {
                                 // We ran into an unknown sequence
                                 seq.extend_from_slice(v.as_slice());
-                                return self.cache.add_and_return(AliquotSeq::Unknown(seq));
+                                return self.cache.add_and_return(AliquotSeq::Unknown(seq, reason));
                             }
                         }
                     } else if next == T::ONE {
@@ -501,11 +502,13 @@ where
                         "Sequence of {n} unknown, because an error occurred"
                     ));
                     println!("Error: {err_msg}");
-                    return self.cache.add_and_return(AliquotSeq::Unknown(seq));
+                    let reason = format!("{err_msg}");
+                    return self.cache.add_and_return(AliquotSeq::Unknown(seq, reason));
                 }
             }
         }
-        self.cache.add_and_return(AliquotSeq::Unknown(seq))
+        let reason = format!("Maximum length {} of sequence exceeded", self.max_len_seq);
+        self.cache.add_and_return(AliquotSeq::Unknown(seq, reason))
     }
 
     /// Returns the associated cache object.
@@ -610,50 +613,16 @@ mod tests {
         test_gen(
             &mut gener,
             276,
-            AliquotSeq::Unknown(vec![
-                276,
-                396,
-                696,
-                1104,
-                1872,
-                3770,
-                3790,
-                3050,
-                2716,
-                2772,
-                5964,
-                10164,
-                19628,
-                19684,
-                22876,
-                26404,
-                30044,
-                33796,
-                38780,
-                54628,
-                54684,
-                111300,
-                263676,
-                465668,
-                465724,
-                465780,
-                1026060,
-                2325540,
-                5335260,
-                11738916,
-                23117724,
-                45956820,
-                121129260,
-                266485716,
-                558454764,
-                1092873236,
-                1470806764,
-                1471882804,
-                1642613196,
-                2737688884,
-                2740114636,
-                2791337780,
-            ]),
+            AliquotSeq::Unknown(
+                vec![
+                    276, 396, 696, 1104, 1872, 3770, 3790, 3050, 2716, 2772, 5964, 10164, 19628,
+                    19684, 22876, 26404, 30044, 33796, 38780, 54628, 54684, 111300, 263676, 465668,
+                    465724, 465780, 1026060, 2325540, 5335260, 11738916, 23117724, 45956820,
+                    121129260, 266485716, 558454764, 1092873236, 1470806764, 1471882804,
+                    1642613196, 2737688884, 2740114636, 2791337780,
+                ],
+                "Overflow error: 4213448791 plus 99690663 exceeds maximum 4294967295".to_string(),
+            ),
         );
     }
 

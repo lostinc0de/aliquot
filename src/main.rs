@@ -109,7 +109,7 @@ fn run() -> Result<(), AliquotError> {
     if ranges.len() == 1 && n_threads > 1 {
         let n_per_thread = (ranges[0].end - ranges[0].start) / n_threads as u64;
         // Split the range
-        for i in 0..n_threads {
+        for (i, w) in workload.iter_mut().enumerate().take(n_threads) {
             let ind = i as u64;
             let start = ranges[0].start + (ind * n_per_thread);
             let end = if i == (n_threads - 1) {
@@ -117,7 +117,7 @@ fn run() -> Result<(), AliquotError> {
             } else {
                 ranges[0].start + ((ind + 1) * n_per_thread)
             };
-            workload[i].push(start..end);
+            w.push(start..end);
         }
     } else {
         // Distribute the ranges among the threads
@@ -129,11 +129,16 @@ fn run() -> Result<(), AliquotError> {
     if debug {
         println!("Debug: Number of threads: {n_threads}");
     }
+    // Start computing sequences
     let mut handles = vec![];
     for w in workload {
         let handle = thread::spawn(move || -> Result<(), AliquotError> {
-            let mut gener =
-                Generator::<u64>::with_params(max_num, max_len_seq, max_cache_size / n_threads, debug);
+            let mut gener = Generator::<u64>::with_params(
+                max_num,
+                max_len_seq,
+                max_cache_size / n_threads,
+                debug,
+            );
             for range in w {
                 if aliquot_sum_only {
                     for n in range {
@@ -164,6 +169,7 @@ fn run() -> Result<(), AliquotError> {
         });
         handles.push(handle);
     }
+    // Sync threads
     for h in handles.into_iter() {
         h.join().unwrap()?;
     }
