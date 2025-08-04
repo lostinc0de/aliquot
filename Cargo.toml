@@ -7,7 +7,6 @@ description = "Generating aliquot sequences"
 homepage = "https://github.com/lostinc0de/aliquot"
 repository = "https://github.com/lostinc0de/aliquot"
 readme = "README.md"
-categories = ["Mathematics"]
 keywords = ["math", "aliquot"]
 
 [dependencies]
