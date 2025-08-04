@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 description = "Generating aliquot sequences"
+homepage = "https://github.com/lostinc0de/aliquot"
 repository = "https://github.com/lostinc0de/aliquot"
 readme = "README.md"
-keywords = ["aliquot"]
+categories = ["Mathematics"]
+keywords = ["math", "aliquot"]
 
 [dependencies]
